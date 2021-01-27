@@ -1,10 +1,11 @@
 package com.tck.av.music.clip
 
-import android.content.res.AssetFileDescriptor
 import android.media.MediaCodec
 import android.media.MediaExtractor
 import android.media.MediaFormat
 import android.util.Log
+import java.io.File
+import java.io.FileOutputStream
 import java.nio.ByteBuffer
 
 /**
@@ -21,7 +22,12 @@ class MusicProcess {
         val AUDIO_MPEG = "audio/mpeg"
     }
 
-    fun clip(path: String, startTime: Long = 0) {
+    fun clip(
+        path: String,
+        pcmPath:String,
+        startTime: Long = 0,
+        endTime: Long = 0
+    ) {
         val mediaExtractor = MediaExtractor()
         mediaExtractor.setDataSource(path)
         val audioTrack = selectTrack(mediaExtractor, AUDIO_PREFIX)
@@ -47,6 +53,57 @@ class MusicProcess {
         val mediaCodec = MediaCodec.createDecoderByType(
             audioFormat.getString(MediaFormat.KEY_MIME) ?: AUDIO_MPEG
         )
+        mediaCodec.configure(audioFormat, null, null, 0)
+        val pcmFile = File(pcmPath)
+        val writeChannel = FileOutputStream(pcmFile).channel
+        mediaCodec.start()
+
+        val bufferInfo = MediaCodec.BufferInfo()
+        var outputBufferIndex = MediaCodec.INFO_TRY_AGAIN_LATER
+        while (true) {
+            val decodeInputIndex = mediaCodec.dequeueInputBuffer(100000)
+            if (decodeInputIndex >= 0) {
+                val sampleTimeUs = mediaExtractor.sampleTime
+                if (sampleTimeUs == -1L) {
+                    break
+                } else if (sampleTimeUs < startTime) {
+                    //丢掉 不用了
+                    mediaExtractor.advance()
+                    continue
+                } else if (sampleTimeUs > endTime) {
+                    break
+                }
+                bufferInfo.size = mediaExtractor.readSampleData(buffer, 0)
+                bufferInfo.presentationTimeUs = sampleTimeUs
+                bufferInfo.flags = mediaExtractor.sampleFlags
+
+                val content = ByteArray(buffer.remaining())
+                buffer.get(content)
+                //解码
+                val inputBuffer = mediaCodec.getInputBuffer(decodeInputIndex)
+                inputBuffer?.put(content)
+                mediaCodec.queueInputBuffer(
+                    decodeInputIndex,
+                    0,
+                    bufferInfo.size,
+                    bufferInfo.presentationTimeUs,
+                    bufferInfo.flags
+                )
+                //释放上一帧的压缩数据
+                mediaExtractor.advance()
+            }
+            outputBufferIndex = mediaCodec.dequeueOutputBuffer(bufferInfo, 100000)
+            while (outputBufferIndex >= 0) {
+                val outputBuffer = mediaCodec.getOutputBuffer(outputBufferIndex)
+                mediaCodec.releaseOutputBuffer(outputBufferIndex,false)
+                writeChannel.write(outputBuffer)
+                outputBufferIndex=mediaCodec.dequeueOutputBuffer(bufferInfo,100000)
+            }
+        }
+        writeChannel.close()
+        mediaExtractor.release()
+        mediaCodec.stop()
+        mediaCodec.release()
     }
 
 
