@@ -50,22 +50,28 @@ class MainActivity : AppCompatActivity() {
     }
 
 
-    private fun audiotrack() {
-//        val player = AudioTrack.Builder().setAudioAttributes(
-//            AudioAttributes
-//                .Builder()
-//                .setUsage(AudioAttributes.USAGE_ALARM)
-//                .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
-//                .build()
-//        ).setAudioFormat(
-//            AudioFormat.Builder()
-//                .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
-//                .setSampleRate(44100)
-//                .setChannelMask(AudioFormat.CHANNEL_OUT_STEREO)
-//                .build()
-//        )
-//            .setBufferSizeInBytes()
-//            .build()
+    private fun audioTrack() {
+        val sampleRateInHz=44100
+        val audioFormat=AudioFormat.ENCODING_PCM_16BIT
+        val channelMask=AudioFormat.CHANNEL_OUT_STEREO
+        val minBufferSize =
+            AudioTrack.getMinBufferSize(sampleRateInHz, channelMask, audioFormat)
+
+        val player = AudioTrack.Builder().setAudioAttributes(
+            AudioAttributes
+                .Builder()
+                .setUsage(AudioAttributes.USAGE_MEDIA)
+                .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
+                .build()
+        ).setAudioFormat(
+            AudioFormat.Builder()
+                .setEncoding(audioFormat)
+                .setSampleRate(sampleRateInHz)
+                .setChannelMask(channelMask)
+                .build()
+        )
+            .setBufferSizeInBytes(minBufferSize)
+            .build()
 
     }
 }
