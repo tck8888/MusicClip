@@ -20,7 +20,7 @@
         android:layout_height="wrap_content"
         android:layout_marginStart="12dp"
         android:layout_marginEnd="12dp"
-        android:text="使用MediaPlayer" />
+        android:text="使用MediaPlayer播放mp3" />
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -45,6 +45,44 @@
 
         <Button
             android:id="@+id/btn_media_player_release"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:text="释放"
+            android:textAllCaps="false" />
+
+    </LinearLayout>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="12dp"
+        android:layout_marginEnd="12dp"
+        android:text="使用AudioTrack播放pcm" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_margin="12dp"
+        android:orientation="horizontal">
+
+        <Button
+            android:id="@+id/btn_audioTrack_play"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="播放"
+            android:textAllCaps="false" />
+
+        <Button
+            android:id="@+id/btn_audioTrack_pause"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:text="暂停"
+            android:textAllCaps="false" />
+
+        <Button
+            android:id="@+id/btn_audioTrack_release"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginStart="12dp"

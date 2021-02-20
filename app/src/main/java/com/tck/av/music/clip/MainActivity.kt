@@ -48,6 +48,21 @@ class MainActivity : AppCompatActivity() {
         binding.btnMediaPlayerRelease.setOnClickListener {
             MediaPlayerHelper.instances.release()
         }
+
+        binding.btnAudioTrackPlay.setOnClickListener {
+
+            val file = File(cacheDir, "tempPcmFile.pcm")
+
+            if (!file.exists()) {
+                return@setOnClickListener
+            }
+
+            if (file.length() <= 0) {
+                return@setOnClickListener
+            }
+
+            AudioTrackManager.instances.play(file.absolutePath)
+        }
     }
 
     private fun startClip() {

@@ -1,9 +1,15 @@
 package com.tck.av.music.clip
 
+import android.media.AudioAttributes
 import android.media.AudioFormat
 import android.media.AudioTrack
+import java.io.File
+import java.io.FileInputStream
 
-/**https://www.jianshu.com/p/6ce1fade1a17
+/**
+ * https://www.jianshu.com/p/6ce1fade1a17
+ * https://www.jianshu.com/p/632dce664c3d
+ *
  *<p>description:</p>
  *<p>created on: 2021/1/28 12:57</p>
  * @author tck
@@ -21,25 +27,128 @@ class AudioTrackManager private constructor() {
     /**
      * 采用率
      */
-    val sampleRateInHz = 44100
+    private val sampleRateInHz = 44100
 
     /**
      * 声道数目
      */
-    val channelConfig = AudioFormat.CHANNEL_OUT_STEREO
+    private val channelConfig = AudioFormat.CHANNEL_OUT_STEREO
 
-    val audioFormat = AudioFormat.ENCODING_PCM_16BIT
+    private val audioFormat = AudioFormat.ENCODING_PCM_16BIT
 
     /**
      * 换从取大小
      */
     private var minBufferSize = 0
 
-    init {
+
+    private var audioTrack: AudioTrack? = null
+    private var audioTrackThread: Thread? = null
+
+    fun play(pcmPath: String) {
+        val pcmFile = File(pcmPath)
+        if (!pcmFile.exists()) {
+            return
+        }
+        if (pcmFile.length() <= 0) {
+            return
+        }
+
         initAudioTrack()
+
+        val audioTrackTemp = audioTrack ?: return
+
+        TLog.d("audioTrack init success")
+        audioTrackThread = Thread {
+            FileInputStream(pcmFile).use { fileInputStream ->
+                try {
+                    val buffer = ByteArray(minBufferSize / 2)
+                    var readCount: Int
+                    audioTrackTemp.play()
+                    while (fileInputStream.available() > 0) {
+                        readCount = fileInputStream.read(buffer)
+                        TLog.d("audioTrack read readCount:$readCount")
+                        if (readCount == AudioTrack.ERROR_BAD_VALUE || readCount == AudioTrack.ERROR_INVALID_OPERATION) {
+                            continue
+                        }
+                        if (readCount > 0) {
+                            audioTrackTemp.write(buffer, 0, readCount)
+                        }
+
+                    }
+                } catch (e: Exception) {
+                    TLog.d("play error:${e.message}")
+                }
+            }
+        }
+
+        audioTrackThread?.start()
     }
 
-    fun initAudioTrack() {
-        minBufferSize = AudioTrack.getMinBufferSize(sampleRateInHz, channelConfig, audioFormat)
+    private fun initAudioTrack() {
+        if (audioTrack == null) {
+            minBufferSize = AudioTrack.getMinBufferSize(sampleRateInHz, channelConfig, audioFormat)
+            try {
+                audioTrack = AudioTrack.Builder()
+                    .setAudioAttributes(
+                        AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_MEDIA)
+                            .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC).build()
+                    )
+                    .setAudioFormat(
+                        AudioFormat.Builder().setEncoding(audioFormat).setSampleRate(sampleRateInHz)
+                            .setChannelMask(channelConfig).build()
+                    )
+                    .setBufferSizeInBytes(minBufferSize)
+                    .setTransferMode(AudioTrack.MODE_STREAM)
+                    .build()
+            } catch (e: Exception) {
+                TLog.d("initAudioTrack error:${e.message}")
+            }
+        }
     }
+
+    fun pause() {
+        try {
+            audioTrack?.let {
+                if (it.state > AudioTrack.STATE_UNINITIALIZED) {
+                    it.pause()
+                    TLog.d("audioTrack pause success")
+                }
+            }
+        } catch (e: Exception) {
+            TLog.d("pause audioTrack pause error:${e.message}")
+        }
+
+        try {
+            audioTrackThread?.interrupt()
+        } catch (e: Exception) {
+            TLog.d("pause audioTrackThread interrupt error:${e.message}")
+        }
+
+    }
+
+    fun release() {
+        try {
+            audioTrack?.let {
+                if (it.state == AudioTrack.STATE_INITIALIZED) {
+                    it.stop()
+                    it.release()
+                    TLog.d("audioTrack stop and release success")
+                }
+            }
+        } catch (e: Exception) {
+            TLog.d("audioTrack release error:${e.message}")
+        }
+
+        try {
+            audioTrackThread?.interrupt()
+        } catch (e: Exception) {
+            TLog.d("release audioTrackThread interrupt error:${e.message}")
+        }
+
+        audioTrack = null
+        audioTrackThread = null
+    }
+
+
 }
