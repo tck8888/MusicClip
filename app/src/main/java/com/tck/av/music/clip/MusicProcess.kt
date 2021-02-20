@@ -24,7 +24,7 @@ class MusicProcess {
 
     fun clip(
         path: String,
-        pcmPath:String,
+        pcmPath: String,
         startTime: Long = 0,
         endTime: Long = 0
     ) {
@@ -59,10 +59,13 @@ class MusicProcess {
         mediaCodec.start()
 
         val bufferInfo = MediaCodec.BufferInfo()
-        var outputBufferIndex = MediaCodec.INFO_TRY_AGAIN_LATER
+        var outputBufferIndex: Int
         while (true) {
+            // 获取空闲的写入缓冲区
             val decodeInputIndex = mediaCodec.dequeueInputBuffer(100000)
+            // 已经拿到可以使用的写入缓冲区
             if (decodeInputIndex >= 0) {
+                // 将预定时间间隔内的音频数据塞入缓冲区
                 val sampleTimeUs = mediaExtractor.sampleTime
                 if (sampleTimeUs == -1L) {
                     break
@@ -92,12 +95,13 @@ class MusicProcess {
                 //释放上一帧的压缩数据
                 mediaExtractor.advance()
             }
+            // 取出解码后的 pcm 裸数据
             outputBufferIndex = mediaCodec.dequeueOutputBuffer(bufferInfo, 100000)
             while (outputBufferIndex >= 0) {
                 val outputBuffer = mediaCodec.getOutputBuffer(outputBufferIndex)
-                mediaCodec.releaseOutputBuffer(outputBufferIndex,false)
+                mediaCodec.releaseOutputBuffer(outputBufferIndex, false)
                 writeChannel.write(outputBuffer)
-                outputBufferIndex=mediaCodec.dequeueOutputBuffer(bufferInfo,100000)
+                outputBufferIndex = mediaCodec.dequeueOutputBuffer(bufferInfo, 100000)
             }
         }
         writeChannel.close()

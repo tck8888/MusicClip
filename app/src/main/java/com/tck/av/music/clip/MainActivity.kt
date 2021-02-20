@@ -3,11 +3,15 @@ package com.tck.av.music.clip
 import android.media.AudioAttributes
 import android.media.AudioFormat
 import android.media.AudioTrack
+import android.media.MediaPlayer
 import android.os.Bundle
+import android.view.SurfaceHolder
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.tck.av.music.clip.databinding.ActivityMainBinding
 import java.io.File
 import java.io.FileOutputStream
+import java.text.FieldPosition
 
 class MainActivity : AppCompatActivity() {
 
@@ -20,6 +24,29 @@ class MainActivity : AppCompatActivity() {
 
         binding.btnClipMusic.setOnClickListener {
             startClip()
+        }
+
+        binding.btnMediaPlayerPlay.setOnClickListener {
+            //val file = File(cacheDir, "tempPcmFile.pcm")
+            val file = File(cacheDir, "music.mp3")
+
+            if (!file.exists()) {
+                return@setOnClickListener
+            }
+
+            if (file.length() <= 0) {
+                return@setOnClickListener
+            }
+
+            MediaPlayerHelper.instances.play(file.absolutePath)
+        }
+
+        binding.btnMediaPlayerPause.setOnClickListener {
+            MediaPlayerHelper.instances.pause()
+        }
+
+        binding.btnMediaPlayerRelease.setOnClickListener {
+            MediaPlayerHelper.instances.release()
         }
     }
 
@@ -49,29 +76,5 @@ class MainActivity : AppCompatActivity() {
         from.transferTo(assetFileDescriptor.startOffset, assetFileDescriptor.length, to)
     }
 
-
-    private fun audioTrack() {
-        val sampleRateInHz=44100
-        val audioFormat=AudioFormat.ENCODING_PCM_16BIT
-        val channelMask=AudioFormat.CHANNEL_OUT_STEREO
-        val minBufferSize =
-            AudioTrack.getMinBufferSize(sampleRateInHz, channelMask, audioFormat)
-
-        val player = AudioTrack.Builder().setAudioAttributes(
-            AudioAttributes
-                .Builder()
-                .setUsage(AudioAttributes.USAGE_MEDIA)
-                .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
-                .build()
-        ).setAudioFormat(
-            AudioFormat.Builder()
-                .setEncoding(audioFormat)
-                .setSampleRate(sampleRateInHz)
-                .setChannelMask(channelMask)
-                .build()
-        )
-            .setBufferSizeInBytes(minBufferSize)
-            .build()
-
-    }
 }
+
