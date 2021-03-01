@@ -2,8 +2,10 @@ package com.tck.av.music.audio.record
 
 import android.media.*
 import com.tck.av.common.TLog
+import com.tck.av.pcm.player.DefaultTaskExecutor
 import java.io.File
 import java.io.FileOutputStream
+import java.lang.ref.WeakReference
 import java.nio.channels.FileChannel
 
 /**
@@ -13,12 +15,15 @@ import java.nio.channels.FileChannel
  * @version v1.0
  *
  */
-class AudioRecordAndEncodingTask(val aacFile: File) : Runnable {
+class AudioRecordAndEncodingTask(
+     val aacFile: File,
+    var callback: AudioRecordCallback? = null
+) : Runnable {
 
     private val TAG = "AudioRecordAndEncodingTask >>> "
-    val sampleRateInHz = 44100
-    val channelCount = 2
-    private val channelConfig = AudioFormat.CHANNEL_IN_STEREO
+    private val sampleRateInHz = 44100
+    private val channelCount = 2
+    private val channelConfig = AudioFormat.CHANNEL_IN_MONO
     private val audioFormat = AudioFormat.ENCODING_PCM_16BIT
 
     private var mediaCodec: MediaCodec? = null
@@ -38,7 +43,7 @@ class AudioRecordAndEncodingTask(val aacFile: File) : Runnable {
             )
             setInteger(
                 MediaFormat.KEY_BIT_RATE,
-                640000
+                64000
             )
         }
         val mediaCodec = MediaCodec.createEncoderByType(MediaFormat.MIMETYPE_AUDIO_AAC)
@@ -69,15 +74,20 @@ class AudioRecordAndEncodingTask(val aacFile: File) : Runnable {
 
         val mediaCodecTemp = mediaCodec ?: return
         val audioRecordTemp = audioRecord ?: return
+        callback?.let {
+            DefaultTaskExecutor.instances.executeOnMainThread {
+                callback?.onStart()
+            }
+        }
 
         isRecording = true
         audioRecordTemp.startRecording()
+        mediaCodecTemp.start()
         val audioData = ByteArray(minBufferSize)
         val bufferInfo = MediaCodec.BufferInfo()
-
-        FileOutputStream(aacFile).channel.use { fileChannel ->
+        FileOutputStream(aacFile).use { fileOutputStream ->
             while (isRecording) {
-                val readCount = audioRecordTemp.read(audioData, 0, minBufferSize)
+                val readCount = audioRecordTemp.read(audioData, 0, audioData.size)
                 TLog.i("$TAG readCount:${readCount}")
                 if (readCount <= 0) {
                     continue
@@ -87,7 +97,7 @@ class AudioRecordAndEncodingTask(val aacFile: File) : Runnable {
                     val inputBuffer = mediaCodecTemp.getInputBuffer(index)
                     inputBuffer?.apply {
                         clear()
-                        put(audioData, 0, minBufferSize)
+                        put(audioData, 0, readCount)
                     }
                     mediaCodecTemp.queueInputBuffer(
                         index,
@@ -101,9 +111,9 @@ class AudioRecordAndEncodingTask(val aacFile: File) : Runnable {
                 index = mediaCodecTemp.dequeueOutputBuffer(bufferInfo, 10)
                 while (index >= 0 && isRecording) {
                     val outputBuffer = mediaCodecTemp.getOutputBuffer(index)
-                    //  val data = ByteArray(bufferInfo.size)
-                    // outputBuffer?.get(data)
-                    fileChannel.write(outputBuffer)
+                      val data = ByteArray(bufferInfo.size)
+                     outputBuffer?.get(data)
+                    fileOutputStream.write(data)
                     mediaCodecTemp.releaseOutputBuffer(index, false)
                     index = mediaCodecTemp.dequeueOutputBuffer(bufferInfo, 10)
                 }
@@ -119,6 +129,12 @@ class AudioRecordAndEncodingTask(val aacFile: File) : Runnable {
         mediaCodecTemp.release()
         mediaCodec = null
 
-        TLog.i("$TAG recording end")
+        TLog.i("$TAG recording end ")
+
+        callback?.let {
+            DefaultTaskExecutor.instances.executeOnMainThread {
+                callback?.onEnd()
+            }
+        }
     }
 }

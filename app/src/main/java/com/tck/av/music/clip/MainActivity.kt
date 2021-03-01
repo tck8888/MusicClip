@@ -3,7 +3,8 @@ package com.tck.av.music.clip
 import android.content.Intent
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
-import com.tck.av.music.audio.record.AudioRecordHomeActivity
+import com.tck.av.music.audio.record.AudioRecordAACHomeActivity
+import com.tck.av.music.audio.record.AudioRecordPCMHomeActivity
 import com.tck.av.music.clip.databinding.ActivityMainBinding
 import java.io.File
 import java.io.FileOutputStream
@@ -23,7 +24,7 @@ class MainActivity : AppCompatActivity() {
 
         binding.btnMediaPlayerPlay.setOnClickListener {
             //val file = File(cacheDir, "tempPcmFile.pcm")
-            val file = File(cacheDir, "music.mp3")
+            val file = File(cacheDir, "aacPath/1614609321405.aac")
 
             if (!file.exists()) {
                 return@setOnClickListener
@@ -60,7 +61,11 @@ class MainActivity : AppCompatActivity() {
         }
 
         binding.btnAudioStart.setOnClickListener {
-            startActivity(Intent(this, AudioRecordHomeActivity::class.java))
+            startActivity(Intent(this, AudioRecordPCMHomeActivity::class.java))
+        }
+
+        binding.btnAudioStartAac.setOnClickListener {
+            startActivity(Intent(this, AudioRecordAACHomeActivity::class.java))
         }
     }
 

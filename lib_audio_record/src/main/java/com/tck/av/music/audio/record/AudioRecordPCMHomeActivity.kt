@@ -2,25 +2,19 @@ package com.tck.av.music.audio.record
 
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
-import android.os.Handler
-import android.os.Looper
-import android.os.Message
 import com.tck.av.common.PermissionsUtils
-import com.tck.av.common.TLog
-import com.tck.av.music.audio.record.databinding.ActivityAudioRecordHomeBinding
-import com.tck.av.pcm.player.DefaultTaskExecutor
+import com.tck.av.music.audio.record.databinding.ActivityAudioRecordPcmHomeBinding
 import com.tck.av.pcm.player.PcmPlayerController
 import com.tck.av.pcm.player.PlayHandler
 import java.io.File
-import java.lang.ref.WeakReference
 
-class AudioRecordHomeActivity : AppCompatActivity() {
+class AudioRecordPCMHomeActivity : AppCompatActivity() {
 
-    private lateinit var binding: ActivityAudioRecordHomeBinding
+    private lateinit var binding: ActivityAudioRecordPcmHomeBinding
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        binding = ActivityAudioRecordHomeBinding.inflate(layoutInflater)
+        binding = ActivityAudioRecordPcmHomeBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
         binding.btnStartRecord.setOnClickListener {
