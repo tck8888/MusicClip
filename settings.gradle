@@ -1,2 +1,3 @@
+include ':lib_audio_record'
 include ':app'
 rootProject.name = "MusicClip"

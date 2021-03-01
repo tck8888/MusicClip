@@ -3,6 +3,7 @@ package com.tck.av.music.clip
 import android.media.AudioAttributes
 import android.media.AudioFormat
 import android.media.AudioTrack
+import com.tck.av.music.audio.record.TLog
 import java.io.File
 import java.io.FileInputStream
 
@@ -58,7 +59,7 @@ class AudioTrackManager private constructor() {
 
         val audioTrackTemp = audioTrack ?: return
 
-        TLog.d("audioTrack init success")
+        TLog.i("audioTrack init success")
         audioTrackThread = Thread {
             FileInputStream(pcmFile).use { fileInputStream ->
                 try {
@@ -67,7 +68,7 @@ class AudioTrackManager private constructor() {
                     audioTrackTemp.play()
                     while (fileInputStream.available() > 0) {
                         readCount = fileInputStream.read(buffer)
-                        TLog.d("audioTrack read readCount:$readCount")
+                        TLog.i("audioTrack read readCount:$readCount")
                         if (readCount == AudioTrack.ERROR_BAD_VALUE || readCount == AudioTrack.ERROR_INVALID_OPERATION) {
                             continue
                         }
@@ -77,7 +78,7 @@ class AudioTrackManager private constructor() {
 
                     }
                 } catch (e: Exception) {
-                    TLog.d("play error:${e.message}")
+                    TLog.i("play error:${e.message}")
                 }
             }
         }
@@ -102,7 +103,7 @@ class AudioTrackManager private constructor() {
                     .setTransferMode(AudioTrack.MODE_STREAM)
                     .build()
             } catch (e: Exception) {
-                TLog.d("initAudioTrack error:${e.message}")
+                TLog.i("initAudioTrack error:${e.message}")
             }
         }
     }
@@ -112,17 +113,17 @@ class AudioTrackManager private constructor() {
             audioTrack?.let {
                 if (it.state > AudioTrack.STATE_UNINITIALIZED) {
                     it.pause()
-                    TLog.d("audioTrack pause success")
+                    TLog.i("audioTrack pause success")
                 }
             }
         } catch (e: Exception) {
-            TLog.d("pause audioTrack pause error:${e.message}")
+            TLog.i("pause audioTrack pause error:${e.message}")
         }
 
         try {
             audioTrackThread?.interrupt()
         } catch (e: Exception) {
-            TLog.d("pause audioTrackThread interrupt error:${e.message}")
+            TLog.i("pause audioTrackThread interrupt error:${e.message}")
         }
 
     }
@@ -133,17 +134,17 @@ class AudioTrackManager private constructor() {
                 if (it.state == AudioTrack.STATE_INITIALIZED) {
                     it.stop()
                     it.release()
-                    TLog.d("audioTrack stop and release success")
+                    TLog.i("audioTrack stop and release success")
                 }
             }
         } catch (e: Exception) {
-            TLog.d("audioTrack release error:${e.message}")
+            TLog.i("audioTrack release error:${e.message}")
         }
 
         try {
             audioTrackThread?.interrupt()
         } catch (e: Exception) {
-            TLog.d("release audioTrackThread interrupt error:${e.message}")
+            TLog.i("release audioTrackThread interrupt error:${e.message}")
         }
 
         audioTrack = null

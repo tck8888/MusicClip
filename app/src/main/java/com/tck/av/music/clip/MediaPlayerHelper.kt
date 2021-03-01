@@ -2,6 +2,7 @@ package com.tck.av.music.clip
 
 import android.media.MediaPlayer
 import android.view.SurfaceHolder
+import com.tck.av.music.audio.record.TLog
 
 /**
  *<p>description:</p>
@@ -41,7 +42,7 @@ class MediaPlayerHelper private constructor() : MediaPlayer.OnErrorListener,
             mediaPlayer?.setDataSource(pcmPath)
             mediaPlayer?.prepareAsync()
         } catch (e: Exception) {
-            TLog.d("play $pcmPath error:${e.message}")
+            TLog.i("play $pcmPath error:${e.message}")
         }
     }
 
@@ -84,18 +85,18 @@ class MediaPlayerHelper private constructor() : MediaPlayer.OnErrorListener,
     override fun onPrepared(mp: MediaPlayer?) {
         hasPrepared = true
         start()
-        TLog.d("media prepared success,start play...")
+        TLog.i("media prepared success,start play...")
     }
 
     override fun onError(mp: MediaPlayer?, what: Int, extra: Int): Boolean {
         hasPrepared = false
-        TLog.d("play error what:${what},extra:${extra}")
+        TLog.i("play error what:${what},extra:${extra}")
         return false
     }
 
     override fun onCompletion(mp: MediaPlayer?) {
         hasPrepared = false
-        TLog.d("play completion")
+        TLog.i("play completion")
     }
 
 

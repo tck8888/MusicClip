@@ -1,4 +1,4 @@
-package com.tck.av.music.clip
+package com.tck.av.music.audio.record
 
 import android.util.Log
 
@@ -13,7 +13,7 @@ object TLog {
 
     private const val TAG = "tck6666"
 
-    fun d(msg: String) {
-        Log.d(TAG, msg)
+    fun i(msg: String) {
+        Log.i(TAG, msg)
     }
 }

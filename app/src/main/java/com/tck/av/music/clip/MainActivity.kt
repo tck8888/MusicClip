@@ -1,17 +1,12 @@
 package com.tck.av.music.clip
 
-import android.media.AudioAttributes
-import android.media.AudioFormat
-import android.media.AudioTrack
-import android.media.MediaPlayer
+import android.content.Intent
 import android.os.Bundle
-import android.view.SurfaceHolder
-import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import com.tck.av.music.audio.record.AudioRecordHomeActivity
 import com.tck.av.music.clip.databinding.ActivityMainBinding
 import java.io.File
 import java.io.FileOutputStream
-import java.text.FieldPosition
 
 class MainActivity : AppCompatActivity() {
 
@@ -62,6 +57,10 @@ class MainActivity : AppCompatActivity() {
             }
 
             AudioTrackManager.instances.play(file.absolutePath)
+        }
+
+        binding.btnAudioStart.setOnClickListener {
+            startActivity(Intent(this, AudioRecordHomeActivity::class.java))
         }
     }
 
