@@ -16,7 +16,7 @@ import java.lang.ref.WeakReference
  *
  */
 class PcmPlayerTask(
-    val pcmFile: File,
+    private val pcmFile: File,
     var playHandler: WeakReference<PlayHandler>?
 ) : Runnable {
 
