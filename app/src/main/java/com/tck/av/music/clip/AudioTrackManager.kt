@@ -3,7 +3,7 @@ package com.tck.av.music.clip
 import android.media.AudioAttributes
 import android.media.AudioFormat
 import android.media.AudioTrack
-import com.tck.av.music.audio.record.TLog
+import com.tck.av.common.TLog
 import java.io.File
 import java.io.FileInputStream
 

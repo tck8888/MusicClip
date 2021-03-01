@@ -2,7 +2,7 @@ package com.tck.av.music.clip
 
 import android.media.MediaPlayer
 import android.view.SurfaceHolder
-import com.tck.av.music.audio.record.TLog
+import com.tck.av.common.TLog
 
 /**
  *<p>description:</p>

@@ -1,13 +1,18 @@
 package com.tck.av.music.audio.record
 
-import android.media.AudioFormat
-import android.media.AudioRecord
-import android.media.MediaRecorder
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
+import android.os.Message
+import com.tck.av.common.PermissionsUtils
+import com.tck.av.common.TLog
 import com.tck.av.music.audio.record.databinding.ActivityAudioRecordHomeBinding
+import com.tck.av.pcm.player.DefaultTaskExecutor
+import com.tck.av.pcm.player.PcmPlayerController
+import com.tck.av.pcm.player.PlayHandler
 import java.io.File
-import java.io.FileOutputStream
+import java.lang.ref.WeakReference
 
 class AudioRecordHomeActivity : AppCompatActivity() {
 
@@ -28,8 +33,31 @@ class AudioRecordHomeActivity : AppCompatActivity() {
 
         binding.btnStopRecord.setOnClickListener {
             audioRecordThread?.stopRecord()
+            binding.tvPcmFile.text = audioRecordThread?.pcmFile?.absolutePath
             audioRecordThread = null
+
         }
+        binding.btnPlayPcm.setOnClickListener {
+            startPlay()
+        }
+    }
+
+
+    private fun startPlay() {
+        val pcmPath = binding.tvPcmFile.text.toString().trim()
+        val file = File(pcmPath)
+        if (!file.exists()) {
+            return
+        }
+        PcmPlayerController.instances.play(file, object : PlayHandler {
+            override fun onStart() {
+                binding.btnPlayPcm.text = "播放中..."
+            }
+
+            override fun onEnd() {
+                binding.btnPlayPcm.text = "播放"
+            }
+        })
 
     }
 
@@ -64,64 +92,3 @@ class AudioRecordHomeActivity : AppCompatActivity() {
     }
 }
 
-class AudioRecordThread(val pcmFile: File) : Thread() {
-
-    private val TAG = "AudioRecordThread >>> "
-    private val sampleRateInHz = 44100
-    private val channelConfig = AudioFormat.CHANNEL_IN_STEREO
-    private val audioFormat = AudioFormat.ENCODING_PCM_16BIT
-
-    private var minBufferSize = 0
-    private var audioRecord: AudioRecord? = null
-
-    var isRecording: Boolean = false
-
-    private fun createAudioRecord(): AudioRecord {
-        return AudioRecord(
-            MediaRecorder.AudioSource.MIC,
-            sampleRateInHz,
-            channelConfig,
-            audioFormat,
-            minBufferSize
-        )
-    }
-
-    fun startRecord() {
-        minBufferSize = AudioRecord.getMinBufferSize(sampleRateInHz, channelConfig, audioFormat)
-        if (minBufferSize == 0) {
-            minBufferSize = 8 * 1024
-        }
-        audioRecord = createAudioRecord()
-
-        start()
-    }
-
-    fun stopRecord() {
-        isRecording = false
-    }
-
-    override fun run() {
-        super.run()
-        val audioRecordTemp = audioRecord ?: return
-        isRecording = true
-        audioRecordTemp.startRecording()
-        val buffer = ByteArray(minBufferSize)
-        FileOutputStream(pcmFile).use { fileOutputStream ->
-            while (isRecording) {
-                val readStatus = audioRecordTemp.read(buffer, 0, minBufferSize)
-                TLog.i("$TAG readStatus: $readStatus")
-                if (readStatus >= 0) {
-                    fileOutputStream.write(buffer, 0, minBufferSize)
-                }
-            }
-        }
-        isRecording = false
-        audioRecordTemp.stop()
-        audioRecordTemp.release()
-        audioRecord = null
-        TLog.i("$TAG recording end")
-
-    }
-
-
-}
