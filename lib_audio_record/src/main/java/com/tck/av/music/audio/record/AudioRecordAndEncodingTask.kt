@@ -30,6 +30,10 @@ class AudioRecordAndEncodingTask(
     private var minBufferSize = 0
     var isRecording: Boolean = false
 
+    companion object{
+        const val MAX_INPUT_SIZE=4096
+    }
+
     private fun createMediaCodec(): MediaCodec {
         val mediaFormat = MediaFormat.createAudioFormat(
             MediaFormat.MIMETYPE_AUDIO_AAC,
@@ -44,6 +48,7 @@ class AudioRecordAndEncodingTask(
                 MediaFormat.KEY_BIT_RATE,
                 44100
             )
+            setInteger(MediaFormat.KEY_MAX_INPUT_SIZE, MAX_INPUT_SIZE)
         }
         val mediaCodec = MediaCodec.createEncoderByType(MediaFormat.MIMETYPE_AUDIO_AAC)
         mediaCodec.configure(mediaFormat, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE)
@@ -64,7 +69,9 @@ class AudioRecordAndEncodingTask(
         mediaCodec = createMediaCodec()
         minBufferSize = AudioRecord.getMinBufferSize(sampleRateInHz, channelConfig, audioFormat)
         if (minBufferSize == 0) {
-            minBufferSize = 8 * 1024
+            minBufferSize = MAX_INPUT_SIZE
+        } else {
+            minBufferSize = (MAX_INPUT_SIZE).coerceAtMost(minBufferSize)
         }
         audioRecord = createAudioRecord(minBufferSize)
     }
@@ -111,24 +118,12 @@ class AudioRecordAndEncodingTask(
                 while (index >= 0 && isRecording) {
                     val byteBuffer = mediaCodecTemp.getOutputBuffer(index)
                     byteBuffer?.let {
-//                        val perpcmsize = info.size + 7
-//                        val outByteBuffer = ByteArray(perpcmsize)
-//
-//                        it.position(info.offset)
-//                        it.limit(info.offset + info.size)
-//                        addADTStoPacket(outByteBuffer,perpcmsize)
-//                        it.get(outByteBuffer, 7, info.size)
-//                        it.position(info.offset)
-//                        fileOutputStream.write(outByteBuffer,0,perpcmsize)
-
                         val perpcmsize = info.size + 7
                         val outByteBuffer = ByteArray(perpcmsize)
-                        addADTStoPacket(outByteBuffer,perpcmsize)
+                        addADTStoPacket(outByteBuffer, perpcmsize)
                         it.get(outByteBuffer, 7, info.size)
                         fileOutputStream.write(outByteBuffer)
                     }
-
-
                     mediaCodecTemp.releaseOutputBuffer(index, false)
                     index = mediaCodecTemp.dequeueOutputBuffer(info, 10)
 
@@ -155,8 +150,11 @@ class AudioRecordAndEncodingTask(
     }
 
     private fun addADTStoPacket(packet: ByteArray, frame_length: Int) {
+        //MediaCodecInfo.CodecProfileLevel.AACObjectLC
         val profile = 2
+        //44100
         val sampling_frequency_index = 4
+        //2个声道
         val channel_configuration = 2
 
         packet[0] = 0xFF.toByte()
