@@ -5,8 +5,7 @@ import com.tck.av.common.TLog
 import com.tck.av.pcm.player.DefaultTaskExecutor
 import java.io.File
 import java.io.FileOutputStream
-import java.lang.ref.WeakReference
-import java.nio.channels.FileChannel
+
 
 /**
  *<p>description:</p>
@@ -16,14 +15,14 @@ import java.nio.channels.FileChannel
  *
  */
 class AudioRecordAndEncodingTask(
-     val aacFile: File,
+    val aacFile: File,
     var callback: AudioRecordCallback? = null
 ) : Runnable {
 
     private val TAG = "AudioRecordAndEncodingTask >>> "
     private val sampleRateInHz = 44100
     private val channelCount = 2
-    private val channelConfig = AudioFormat.CHANNEL_IN_MONO
+    private val channelConfig = AudioFormat.CHANNEL_IN_STEREO
     private val audioFormat = AudioFormat.ENCODING_PCM_16BIT
 
     private var mediaCodec: MediaCodec? = null
@@ -43,7 +42,7 @@ class AudioRecordAndEncodingTask(
             )
             setInteger(
                 MediaFormat.KEY_BIT_RATE,
-                64000
+                44100
             )
         }
         val mediaCodec = MediaCodec.createEncoderByType(MediaFormat.MIMETYPE_AUDIO_AAC)
@@ -84,7 +83,7 @@ class AudioRecordAndEncodingTask(
         audioRecordTemp.startRecording()
         mediaCodecTemp.start()
         val audioData = ByteArray(minBufferSize)
-        val bufferInfo = MediaCodec.BufferInfo()
+        val info = MediaCodec.BufferInfo()
         FileOutputStream(aacFile).use { fileOutputStream ->
             while (isRecording) {
                 val readCount = audioRecordTemp.read(audioData, 0, audioData.size)
@@ -108,14 +107,31 @@ class AudioRecordAndEncodingTask(
                     )
                 }
 
-                index = mediaCodecTemp.dequeueOutputBuffer(bufferInfo, 10)
+                index = mediaCodecTemp.dequeueOutputBuffer(info, 10)
                 while (index >= 0 && isRecording) {
-                    val outputBuffer = mediaCodecTemp.getOutputBuffer(index)
-                      val data = ByteArray(bufferInfo.size)
-                     outputBuffer?.get(data)
-                    fileOutputStream.write(data)
+                    val byteBuffer = mediaCodecTemp.getOutputBuffer(index)
+                    byteBuffer?.let {
+//                        val perpcmsize = info.size + 7
+//                        val outByteBuffer = ByteArray(perpcmsize)
+//
+//                        it.position(info.offset)
+//                        it.limit(info.offset + info.size)
+//                        addADTStoPacket(outByteBuffer,perpcmsize)
+//                        it.get(outByteBuffer, 7, info.size)
+//                        it.position(info.offset)
+//                        fileOutputStream.write(outByteBuffer,0,perpcmsize)
+
+                        val perpcmsize = info.size + 7
+                        val outByteBuffer = ByteArray(perpcmsize)
+                        addADTStoPacket(outByteBuffer,perpcmsize)
+                        it.get(outByteBuffer, 7, info.size)
+                        fileOutputStream.write(outByteBuffer)
+                    }
+
+
                     mediaCodecTemp.releaseOutputBuffer(index, false)
-                    index = mediaCodecTemp.dequeueOutputBuffer(bufferInfo, 10)
+                    index = mediaCodecTemp.dequeueOutputBuffer(info, 10)
+
                 }
             }
         }
@@ -136,5 +152,21 @@ class AudioRecordAndEncodingTask(
                 callback?.onEnd()
             }
         }
+    }
+
+    private fun addADTStoPacket(packet: ByteArray, frame_length: Int) {
+        val profile = 2
+        val sampling_frequency_index = 4
+        val channel_configuration = 2
+
+        packet[0] = 0xFF.toByte()
+        packet[1] = 0xF1.toByte()
+        packet[2] =
+            ((profile - 1).shl(6) + sampling_frequency_index.shl(2) + channel_configuration.shr(2)).toByte()
+        packet[3] = ((channel_configuration - 1).shl(7) + (frame_length).shr(11)).toByte()
+        packet[4] = frame_length.and(0x7FF).shr(3).toByte()
+        packet[5] = (frame_length.and(7).shl(5) + 0x1F).toByte()
+        packet[6] = 0xFC.toByte()
+
     }
 }
