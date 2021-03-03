@@ -5,6 +5,7 @@ import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import com.tck.av.music.audio.record.AudioRecordAACHomeActivity
 import com.tck.av.music.audio.record.AudioRecordPCMHomeActivity
+import com.tck.av.music.audio.record.AudioRecordHomeActivity
 import com.tck.av.music.clip.databinding.ActivityMainBinding
 import java.io.File
 import java.io.FileOutputStream
@@ -66,6 +67,10 @@ class MainActivity : AppCompatActivity() {
 
         binding.btnAudioStartAac.setOnClickListener {
             startActivity(Intent(this, AudioRecordAACHomeActivity::class.java))
+        }
+
+        binding.btnAudioRecord.setOnClickListener {
+            startActivity(Intent(this, AudioRecordHomeActivity::class.java))
         }
     }
 

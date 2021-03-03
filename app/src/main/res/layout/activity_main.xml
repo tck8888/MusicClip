@@ -97,10 +97,19 @@
         android:layout_height="wrap_content"
         android:layout_marginStart="12dp"
         android:text="pcm处理相关" />
+
     <Button
         android:id="@+id/btn_audio_start_aac"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginStart="12dp"
         android:text="aac处理相关" />
+
+    <Button
+        android:id="@+id/btn_audio_record"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="12dp"
+        android:text="AudioRecord相关"
+        android:textAllCaps="false" />
 </LinearLayout>

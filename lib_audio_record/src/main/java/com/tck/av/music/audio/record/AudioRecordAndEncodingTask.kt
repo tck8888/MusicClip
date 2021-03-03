@@ -1,6 +1,8 @@
 package com.tck.av.music.audio.record
 
 import android.media.*
+import android.widget.LinearLayout
+import com.tck.av.common.AACHeaderAttribute
 import com.tck.av.common.TLog
 import com.tck.av.pcm.player.DefaultTaskExecutor
 import java.io.File
@@ -22,6 +24,7 @@ class AudioRecordAndEncodingTask(
     private val TAG = "AudioRecordAndEncodingTask >>> "
     private val sampleRateInHz = 44100
     private val channelCount = 2
+    private val profile = MediaCodecInfo.CodecProfileLevel.AACObjectLC
     private val channelConfig = AudioFormat.CHANNEL_IN_STEREO
     private val audioFormat = AudioFormat.ENCODING_PCM_16BIT
 
@@ -31,10 +34,10 @@ class AudioRecordAndEncodingTask(
     var isRecording: Boolean = false
 
     companion object{
-        const val MAX_INPUT_SIZE=4096
+        const val MAX_INPUT_SIZE=8*1024
     }
 
-    private fun createMediaCodec(): MediaCodec {
+    private fun createMediaCodec(sampleRate:Int,bufferSizeInBytes: Int): MediaCodec {
         val mediaFormat = MediaFormat.createAudioFormat(
             MediaFormat.MIMETYPE_AUDIO_AAC,
             sampleRateInHz,
@@ -42,13 +45,13 @@ class AudioRecordAndEncodingTask(
         ).apply {
             setInteger(
                 MediaFormat.KEY_PROFILE,
-                MediaCodecInfo.CodecProfileLevel.AACObjectLC
+                profile
             )
             setInteger(
                 MediaFormat.KEY_BIT_RATE,
-                44100
+                sampleRate
             )
-            setInteger(MediaFormat.KEY_MAX_INPUT_SIZE, MAX_INPUT_SIZE)
+            setInteger(MediaFormat.KEY_MAX_INPUT_SIZE, bufferSizeInBytes)
         }
         val mediaCodec = MediaCodec.createEncoderByType(MediaFormat.MIMETYPE_AUDIO_AAC)
         mediaCodec.configure(mediaFormat, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE)
@@ -66,13 +69,15 @@ class AudioRecordAndEncodingTask(
     }
 
     fun startRecord() {
-        mediaCodec = createMediaCodec()
         minBufferSize = AudioRecord.getMinBufferSize(sampleRateInHz, channelConfig, audioFormat)
-        if (minBufferSize == 0) {
-            minBufferSize = MAX_INPUT_SIZE
+        minBufferSize = if (minBufferSize == 0) {
+            MAX_INPUT_SIZE
         } else {
-            minBufferSize = (MAX_INPUT_SIZE).coerceAtMost(minBufferSize)
+            (MAX_INPUT_SIZE).coerceAtMost(minBufferSize)
         }
+
+        mediaCodec = createMediaCodec(sampleRateInHz,minBufferSize)
+
         audioRecord = createAudioRecord(minBufferSize)
     }
 
@@ -120,13 +125,18 @@ class AudioRecordAndEncodingTask(
                     byteBuffer?.let {
                         val perpcmsize = info.size + 7
                         val outByteBuffer = ByteArray(perpcmsize)
-                        addADTStoPacket(outByteBuffer, perpcmsize)
+                        AACHeaderAttribute.addADTStoPacket(
+                            outByteBuffer,
+                            profile,
+                            sampleRateInHz,
+                            channelCount,
+                            perpcmsize,
+                        )
                         it.get(outByteBuffer, 7, info.size)
                         fileOutputStream.write(outByteBuffer)
                     }
                     mediaCodecTemp.releaseOutputBuffer(index, false)
                     index = mediaCodecTemp.dequeueOutputBuffer(info, 10)
-
                 }
             }
         }
@@ -149,22 +159,4 @@ class AudioRecordAndEncodingTask(
         }
     }
 
-    private fun addADTStoPacket(packet: ByteArray, frame_length: Int) {
-        //MediaCodecInfo.CodecProfileLevel.AACObjectLC
-        val profile = 2
-        //44100
-        val sampling_frequency_index = 4
-        //2个声道
-        val channel_configuration = 2
-
-        packet[0] = 0xFF.toByte()
-        packet[1] = 0xF1.toByte()
-        packet[2] =
-            ((profile - 1).shl(6) + sampling_frequency_index.shl(2) + channel_configuration.shr(2)).toByte()
-        packet[3] = ((channel_configuration - 1).shl(7) + (frame_length).shr(11)).toByte()
-        packet[4] = frame_length.and(0x7FF).shr(3).toByte()
-        packet[5] = (frame_length.and(7).shl(5) + 0x1F).toByte()
-        packet[6] = 0xFC.toByte()
-
-    }
 }
