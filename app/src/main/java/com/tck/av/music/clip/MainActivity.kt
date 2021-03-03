@@ -3,6 +3,7 @@ package com.tck.av.music.clip
 import android.content.Intent
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
+import com.tck.av.extractor.AudioExtractorHomeActivity
 import com.tck.av.music.audio.record.AudioRecordAACHomeActivity
 import com.tck.av.music.audio.record.AudioRecordPCMHomeActivity
 import com.tck.av.music.audio.record.AudioRecordHomeActivity
@@ -71,6 +72,10 @@ class MainActivity : AppCompatActivity() {
 
         binding.btnAudioRecord.setOnClickListener {
             startActivity(Intent(this, AudioRecordHomeActivity::class.java))
+        }
+
+        binding.btnAudioRecord.setOnClickListener {
+            startActivity(Intent(this, AudioExtractorHomeActivity::class.java))
         }
     }
 

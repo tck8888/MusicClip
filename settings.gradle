@@ -1,3 +1,4 @@
+include ':lib-media-extractor'
 include ':lib-common'
 include ':lib-pcm-player'
 include ':lib_audio_record'

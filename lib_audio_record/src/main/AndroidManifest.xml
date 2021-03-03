@@ -7,7 +7,7 @@
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
 
     <application>
-        <activity android:name=".AudioRecordHomeActivity"></activity>
+        <activity android:name=".AudioRecordHomeActivity"  android:screenOrientation="portrait"/>
         <activity
             android:name=".AudioRecordAACHomeActivity"
             android:screenOrientation="portrait" />
