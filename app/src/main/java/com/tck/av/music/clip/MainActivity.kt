@@ -74,7 +74,7 @@ class MainActivity : AppCompatActivity() {
             startActivity(Intent(this, AudioRecordHomeActivity::class.java))
         }
 
-        binding.btnAudioRecord.setOnClickListener {
+        binding.btnAudioExtractor.setOnClickListener {
             startActivity(Intent(this, AudioExtractorHomeActivity::class.java))
         }
     }
@@ -104,6 +104,8 @@ class MainActivity : AppCompatActivity() {
         val to = FileOutputStream(outPath).channel
         from.transferTo(assetFileDescriptor.startOffset, assetFileDescriptor.length, to)
     }
+
+
 
 }
 
