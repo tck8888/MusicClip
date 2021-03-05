@@ -1,12 +1,18 @@
 package com.tck.av.extractor
 
+import android.content.res.Resources
+import android.graphics.Typeface
 import android.media.MediaExtractor
 import android.media.MediaFormat
 import com.tck.av.extractor.databinding.ActivityAudioExtractorHomeBinding
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.text.TextUtils
+import android.util.TypedValue
+import android.widget.LinearLayout
+import android.widget.TextView
 import android.widget.Toast
+import androidx.core.graphics.toColorInt
 import com.tck.av.common.TLog
 import java.io.File
 import java.io.FileOutputStream
@@ -14,6 +20,11 @@ import java.nio.ByteBuffer
 import kotlin.math.min
 
 class AudioExtractorHomeActivity : AppCompatActivity() {
+
+    val testInfo =
+        "{max-bitrate=134072, sample-rate=44100, track-id=1, durationUs=23359274, mime=audio/mp4a-latm, profile=2, channel-count=2, bitrate=128001, language=und, aac-profile=2, max-input-size=581, csd-0=java.nio.HeapByteBuffer[pos=0 lim=2 cap=2]}"
+
+
     private lateinit var binding: ActivityAudioExtractorHomeBinding
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -33,6 +44,25 @@ class AudioExtractorHomeActivity : AppCompatActivity() {
         return File(fileDir, "audio_${fileName}.pcm")
     }
 
+
+    private fun setAudioInfoView(info: String) {
+        binding.llAudioInfo.removeAllViews()
+        val replace = info.replace("{", "")
+        val replace1 = replace.replace("}", "")
+        replace1.split(",").forEach {
+
+            val key = it.substring(0, it.indexOf("=")).trim()
+            val value = it.substring(it.indexOf("=") + 1).trim()
+
+            if (key.isNotEmpty()) {
+                binding.llAudioInfo.addView(createKeyValueInfoWidget(key, value))
+            }
+        }
+
+        binding.llAudioInfo.setBackgroundResource(R.drawable.shape_corners_4dp_stroke_fff0f0f0_solid_1ad8d8d8)
+
+    }
+
     private fun extractorAudio() {
         val mediaExtractor = MediaExtractor()
         mediaExtractor.setDataSource(assets.openFd("WeChat_20210304214737.mp4"))
@@ -44,6 +74,8 @@ class AudioExtractorHomeActivity : AppCompatActivity() {
         }
         val audioFormat = mediaExtractor.getTrackFormat(audioTrackIndex)
 
+        setAudioInfoView(audioFormat.toString())
+
         var maxAudioBufferCount = audioFormat.getInteger(MediaFormat.KEY_MAX_INPUT_SIZE)
         maxAudioBufferCount = if (maxAudioBufferCount == 0) {
             4 * 1024
@@ -54,9 +86,10 @@ class AudioExtractorHomeActivity : AppCompatActivity() {
         val audioByteBuffer = ByteBuffer.allocate(maxAudioBufferCount)
         var readCount = 0
 
-        var fileName = "${System.currentTimeMillis()}"
+        val fileName = "${System.currentTimeMillis()}"
+        val createAudioFile = createAudioFile(fileName)
 
-        FileOutputStream(createAudioFile(fileName)).use { audioOutputStream ->
+        FileOutputStream(createAudioFile).use { audioOutputStream ->
             do {
                 readCount = mediaExtractor.readSampleData(audioByteBuffer, 0)
                 TLog.i("音频抽取:${readCount}")
@@ -70,7 +103,7 @@ class AudioExtractorHomeActivity : AppCompatActivity() {
             } while (readCount != -1)
         }
         mediaExtractor.release()
-        TLog.i("音频抽取完毕")
+        TLog.i("音频抽取完毕,文件大小：${createAudioFile.length() / 1024}kb")
     }
 
     private fun findAudioFormat(mediaExtractor: MediaExtractor): Int {
@@ -174,4 +207,33 @@ class AudioExtractorHomeActivity : AppCompatActivity() {
         header[42] = 1
         header[43] = 1
     }
+
+    private fun createKeyValueInfoWidget(key: String, value: String): LinearLayout {
+        val linearLayout = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            layoutParams = LinearLayout.LayoutParams(-1, -2)
+        }
+
+        val tvKey = TextView(this).apply {
+            textSize = 13f
+            setTextColor("#FF666666".toColorInt())
+            text = key
+            layoutParams = LinearLayout.LayoutParams(100f.dp2px(), -2)
+        }
+        linearLayout.addView(tvKey)
+
+        val tvValue = TextView(this).apply {
+            textSize = 13f
+            typeface = Typeface.defaultFromStyle(Typeface.BOLD)
+            setTextColor("#FF222222".toColorInt())
+            text = value
+            layoutParams = LinearLayout.LayoutParams(-2, -2)
+        }
+        linearLayout.addView(tvValue)
+
+
+        return linearLayout
+    }
 }
+
+fun Float.dp2px(): Int = (Resources.getSystem().displayMetrics.density * this + 0.5f).toInt()
