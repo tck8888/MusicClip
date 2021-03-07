@@ -16,4 +16,8 @@ object TLog {
     fun i(msg: String) {
         Log.i(TAG, msg)
     }
+
+    fun e(msg: String) {
+        Log.e(TAG, msg)
+    }
 }

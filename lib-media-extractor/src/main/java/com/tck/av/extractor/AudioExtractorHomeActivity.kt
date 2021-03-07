@@ -1,19 +1,32 @@
 package com.tck.av.extractor
 
+import android.content.res.Resources
+import android.graphics.Typeface
+import android.media.AudioFormat
 import android.media.MediaExtractor
 import android.media.MediaFormat
 import com.tck.av.extractor.databinding.ActivityAudioExtractorHomeBinding
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.text.TextUtils
+import android.util.TypedValue
+import android.widget.LinearLayout
+import android.widget.TextView
 import android.widget.Toast
+import androidx.core.graphics.toColorInt
 import com.tck.av.common.TLog
 import java.io.File
 import java.io.FileOutputStream
 import java.nio.ByteBuffer
 import kotlin.math.min
 
+//https://mlog.club/article/5729222
 class AudioExtractorHomeActivity : AppCompatActivity() {
+
+    val testInfo =
+        "{max-bitrate=134072, sample-rate=44100, track-id=1, durationUs=23359274, mime=audio/mp4a-latm, profile=2, channel-count=2, bitrate=128001, language=und, aac-profile=2, max-input-size=581, csd-0=java.nio.HeapByteBuffer[pos=0 lim=2 cap=2]}"
+
+
     private lateinit var binding: ActivityAudioExtractorHomeBinding
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -33,6 +46,25 @@ class AudioExtractorHomeActivity : AppCompatActivity() {
         return File(fileDir, "audio_${fileName}.pcm")
     }
 
+
+    private fun setAudioInfoView(info: String) {
+        binding.llAudioInfo.removeAllViews()
+        val replace = info.replace("{", "")
+        val replace1 = replace.replace("}", "")
+        replace1.split(",").forEach {
+
+            val key = it.substring(0, it.indexOf("=")).trim()
+            val value = it.substring(it.indexOf("=") + 1).trim()
+
+            if (key.isNotEmpty()) {
+                binding.llAudioInfo.addView(createKeyValueInfoWidget(key, value))
+            }
+        }
+
+        binding.llAudioInfo.setBackgroundResource(R.drawable.shape_corners_4dp_stroke_fff0f0f0_solid_1ad8d8d8)
+
+    }
+
     private fun extractorAudio() {
         val mediaExtractor = MediaExtractor()
         mediaExtractor.setDataSource(assets.openFd("WeChat_20210304214737.mp4"))
@@ -44,6 +76,8 @@ class AudioExtractorHomeActivity : AppCompatActivity() {
         }
         val audioFormat = mediaExtractor.getTrackFormat(audioTrackIndex)
 
+        setAudioInfoView(audioFormat.toString())
+
         var maxAudioBufferCount = audioFormat.getInteger(MediaFormat.KEY_MAX_INPUT_SIZE)
         maxAudioBufferCount = if (maxAudioBufferCount == 0) {
             4 * 1024
@@ -54,9 +88,10 @@ class AudioExtractorHomeActivity : AppCompatActivity() {
         val audioByteBuffer = ByteBuffer.allocate(maxAudioBufferCount)
         var readCount = 0
 
-        var fileName = "${System.currentTimeMillis()}"
+        val fileName = "${System.currentTimeMillis()}"
+        val createAudioFile = createAudioFile(fileName)
 
-        FileOutputStream(createAudioFile(fileName)).use { audioOutputStream ->
+        FileOutputStream(createAudioFile).use { audioOutputStream ->
             do {
                 readCount = mediaExtractor.readSampleData(audioByteBuffer, 0)
                 TLog.i("音频抽取:${readCount}")
@@ -70,7 +105,7 @@ class AudioExtractorHomeActivity : AppCompatActivity() {
             } while (readCount != -1)
         }
         mediaExtractor.release()
-        TLog.i("音频抽取完毕")
+        TLog.i("音频抽取完毕,文件大小：${createAudioFile.length() / 1024}kb")
     }
 
     private fun findAudioFormat(mediaExtractor: MediaExtractor): Int {
@@ -100,13 +135,34 @@ class AudioExtractorHomeActivity : AppCompatActivity() {
         return -1
     }
 
+    private fun bitsPerSample(format:Int):Byte{
+        return when (format) {
+            AudioFormat.ENCODING_PCM_16BIT -> {
+                16
+            }
+            AudioFormat.ENCODING_PCM_8BIT -> {
+                8
+            }
+            else -> {
+                16
+            }
+        }
+    }
+
     /**
      * https://www.shuzhiduo.com/A/1O5EOq4rz7/
      */
+    /**
+     *
+     * @param totalDataLen 文件的长度
+     */
     private fun addWaveFileHeader(
-        dataSize: Int,
+        totalAudioLen: Long,
+        totalDataLen: Long,
         channelCount: Int,
-        sampleRate: Int,
+        sampleRate: Long,
+        byteRate: Int,
+        bitsPerSample:Byte
     ) {
         val header = ByteArray(44)
         // RIFF 头表示
@@ -115,10 +171,10 @@ class AudioExtractorHomeActivity : AppCompatActivity() {
         header[2] = 'F'.toByte()
         header[3] = 'F'.toByte()
         //数据大小
-        header[4] = 'R'.toByte()
-        header[5] = 'I'.toByte()
-        header[6] = 'F'.toByte()
-        header[7] = 'F'.toByte()
+        header[4] = totalDataLen.and(0xff).toByte()
+        header[5] = totalDataLen.shr(8).and(0xff).toByte()
+        header[6] = totalDataLen.shr(16).and(0xff).toByte()
+        header[7] = totalDataLen.shr(24).and(0xff).toByte()
         //wave格式
         header[8] = 'W'.toByte()
         header[9] = 'A'.toByte()
@@ -130,7 +186,7 @@ class AudioExtractorHomeActivity : AppCompatActivity() {
         header[14] = 't'.toByte()
         header[15] = ' '.toByte()
 
-        header[16] = 16
+        header[16] = 16 // 4 bytes: size of 'fmt ' chunk
         header[17] = 0
         header[18] = 0
         header[19] = 0
@@ -138,30 +194,32 @@ class AudioExtractorHomeActivity : AppCompatActivity() {
         header[20] = 1
         header[21] = 0
         //通道数 channelCount
-        header[22] = if (channelCount > 2) {
-            2
-        } else {
-            1
-        }
+        header[22] = channelCount.toByte()
         header[23] = 0
 
-        //采样频率  sampleRate
-        header[24] = 0
-        header[25] = 1
-        header[26] = 1
-        header[27] = 1
-        //bitrate
-        header[28] = 1
-        header[29] = 1
-        header[30] = 1
-        header[31] = 1
+        //采样频率  sampleRate 2字节
+        header[24] = sampleRate.and(0xff).toByte()
+        header[25] = sampleRate.shr(8).and(0xff).toByte()
+        header[26] = sampleRate.shr(16).and(0xff).toByte()
+        header[27] = sampleRate.shr(24).and(0xff).toByte()
+        //bitrate  2字节
+        // 波形音频数据传送速率，其值为通道数×每秒数据位数×每
+        // 样本的数据位数／8。播放软件利用此值可以估计缓冲区的大小
+        header[28] = byteRate.and(0xff).toByte()
+        header[29] = byteRate.shr(8).and(0xff).toByte()
+        header[30] = byteRate.shr(16).and(0xff).toByte()
+        header[31] = byteRate.shr(24).and(0xff).toByte()
 
-        header[32] = 1
-
+        //2字节
+        //数据块的调整数（按字节算的），
+        // 其值为通道数×每样本的数据位值／8。播
+        // 放软件需要一次处理多个该值大小的字节数据，以便将其值用于缓冲区的调整
+        header[32] = (channelCount*(bitsPerSample/8)).toByte()
         header[33] = 0
 
-        header[34] = 0
-
+        //2
+        //每样本的数据位数，表示每个声道中各个样本的数据位数。如果有多个声道，对每个声道而言，样本大小都一样
+        header[34] = bitsPerSample
         header[35] = 0
 
         header[36] = 'd'.toByte()
@@ -169,9 +227,38 @@ class AudioExtractorHomeActivity : AppCompatActivity() {
         header[38] = 't'.toByte()
         header[39] = 'a'.toByte()
 
-        header[40] = 1
-        header[41] = 1
-        header[42] = 1
-        header[43] = 1
+        header[40] = totalAudioLen.and(0xff).toByte()
+        header[41] = totalAudioLen.shr(8).and(0xff).toByte()
+        header[42] = totalAudioLen.shr(16).and(0xff).toByte()
+        header[43] = totalAudioLen.shr(24).and(0xff).toByte()
+    }
+
+    private fun createKeyValueInfoWidget(key: String, value: String): LinearLayout {
+        val linearLayout = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            layoutParams = LinearLayout.LayoutParams(-1, -2)
+        }
+
+        val tvKey = TextView(this).apply {
+            textSize = 13f
+            setTextColor("#FF666666".toColorInt())
+            text = key
+            layoutParams = LinearLayout.LayoutParams(100f.dp2px(), -2)
+        }
+        linearLayout.addView(tvKey)
+
+        val tvValue = TextView(this).apply {
+            textSize = 13f
+            typeface = Typeface.defaultFromStyle(Typeface.BOLD)
+            setTextColor("#FF222222".toColorInt())
+            text = value
+            layoutParams = LinearLayout.LayoutParams(-2, -2)
+        }
+        linearLayout.addView(tvValue)
+
+
+        return linearLayout
     }
 }
+
+fun Float.dp2px(): Int = (Resources.getSystem().displayMetrics.density * this + 0.5f).toInt()
