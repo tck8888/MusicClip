@@ -1,3 +1,4 @@
+include ':lib-audio-rtmp'
 include ':lib-media-extractor'
 include ':lib-common'
 include ':lib-pcm-player'

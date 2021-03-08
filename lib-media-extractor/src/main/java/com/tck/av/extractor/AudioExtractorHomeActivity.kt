@@ -2,6 +2,7 @@ package com.tck.av.extractor
 
 import android.content.res.Resources
 import android.graphics.Typeface
+import android.media.AudioFormat
 import android.media.MediaExtractor
 import android.media.MediaFormat
 import com.tck.av.extractor.databinding.ActivityAudioExtractorHomeBinding
@@ -19,6 +20,7 @@ import java.io.FileOutputStream
 import java.nio.ByteBuffer
 import kotlin.math.min
 
+//https://mlog.club/article/5729222
 class AudioExtractorHomeActivity : AppCompatActivity() {
 
     val testInfo =
@@ -133,13 +135,34 @@ class AudioExtractorHomeActivity : AppCompatActivity() {
         return -1
     }
 
+    private fun bitsPerSample(format:Int):Byte{
+        return when (format) {
+            AudioFormat.ENCODING_PCM_16BIT -> {
+                16
+            }
+            AudioFormat.ENCODING_PCM_8BIT -> {
+                8
+            }
+            else -> {
+                16
+            }
+        }
+    }
+
     /**
      * https://www.shuzhiduo.com/A/1O5EOq4rz7/
      */
+    /**
+     *
+     * @param totalDataLen 文件的长度
+     */
     private fun addWaveFileHeader(
-        dataSize: Int,
+        totalAudioLen: Long,
+        totalDataLen: Long,
         channelCount: Int,
-        sampleRate: Int,
+        sampleRate: Long,
+        byteRate: Int,
+        bitsPerSample:Byte
     ) {
         val header = ByteArray(44)
         // RIFF 头表示
@@ -148,10 +171,10 @@ class AudioExtractorHomeActivity : AppCompatActivity() {
         header[2] = 'F'.toByte()
         header[3] = 'F'.toByte()
         //数据大小
-        header[4] = 'R'.toByte()
-        header[5] = 'I'.toByte()
-        header[6] = 'F'.toByte()
-        header[7] = 'F'.toByte()
+        header[4] = totalDataLen.and(0xff).toByte()
+        header[5] = totalDataLen.shr(8).and(0xff).toByte()
+        header[6] = totalDataLen.shr(16).and(0xff).toByte()
+        header[7] = totalDataLen.shr(24).and(0xff).toByte()
         //wave格式
         header[8] = 'W'.toByte()
         header[9] = 'A'.toByte()
@@ -163,7 +186,7 @@ class AudioExtractorHomeActivity : AppCompatActivity() {
         header[14] = 't'.toByte()
         header[15] = ' '.toByte()
 
-        header[16] = 16
+        header[16] = 16 // 4 bytes: size of 'fmt ' chunk
         header[17] = 0
         header[18] = 0
         header[19] = 0
@@ -171,30 +194,32 @@ class AudioExtractorHomeActivity : AppCompatActivity() {
         header[20] = 1
         header[21] = 0
         //通道数 channelCount
-        header[22] = if (channelCount > 2) {
-            2
-        } else {
-            1
-        }
+        header[22] = channelCount.toByte()
         header[23] = 0
 
-        //采样频率  sampleRate
-        header[24] = 0
-        header[25] = 1
-        header[26] = 1
-        header[27] = 1
-        //bitrate
-        header[28] = 1
-        header[29] = 1
-        header[30] = 1
-        header[31] = 1
+        //采样频率  sampleRate 2字节
+        header[24] = sampleRate.and(0xff).toByte()
+        header[25] = sampleRate.shr(8).and(0xff).toByte()
+        header[26] = sampleRate.shr(16).and(0xff).toByte()
+        header[27] = sampleRate.shr(24).and(0xff).toByte()
+        //bitrate  2字节
+        // 波形音频数据传送速率，其值为通道数×每秒数据位数×每
+        // 样本的数据位数／8。播放软件利用此值可以估计缓冲区的大小
+        header[28] = byteRate.and(0xff).toByte()
+        header[29] = byteRate.shr(8).and(0xff).toByte()
+        header[30] = byteRate.shr(16).and(0xff).toByte()
+        header[31] = byteRate.shr(24).and(0xff).toByte()
 
-        header[32] = 1
-
+        //2字节
+        //数据块的调整数（按字节算的），
+        // 其值为通道数×每样本的数据位值／8。播
+        // 放软件需要一次处理多个该值大小的字节数据，以便将其值用于缓冲区的调整
+        header[32] = (channelCount*(bitsPerSample/8)).toByte()
         header[33] = 0
 
-        header[34] = 0
-
+        //2
+        //每样本的数据位数，表示每个声道中各个样本的数据位数。如果有多个声道，对每个声道而言，样本大小都一样
+        header[34] = bitsPerSample
         header[35] = 0
 
         header[36] = 'd'.toByte()
@@ -202,10 +227,10 @@ class AudioExtractorHomeActivity : AppCompatActivity() {
         header[38] = 't'.toByte()
         header[39] = 'a'.toByte()
 
-        header[40] = 1
-        header[41] = 1
-        header[42] = 1
-        header[43] = 1
+        header[40] = totalAudioLen.and(0xff).toByte()
+        header[41] = totalAudioLen.shr(8).and(0xff).toByte()
+        header[42] = totalAudioLen.shr(16).and(0xff).toByte()
+        header[43] = totalAudioLen.shr(24).and(0xff).toByte()
     }
 
     private fun createKeyValueInfoWidget(key: String, value: String): LinearLayout {
