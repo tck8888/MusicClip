@@ -1,7 +1,7 @@
-include ':lib-audio-rtmp'
-include ':lib-media-extractor'
-include ':lib-common'
-include ':lib-pcm-player'
+include ':lib_rtmp_service'
+include ':lib_media_extractor'
+include ':lib_common'
+include ':lib_pcm_player'
 include ':lib_audio_record'
 include ':app'
-rootProject.name = "MusicClip"
+rootProject.name = "audio_train"
