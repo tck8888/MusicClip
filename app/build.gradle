@@ -4,13 +4,13 @@ plugins {
 }
 
 android {
-    compileSdkVersion 30
-    buildToolsVersion "30.0.3"
+    compileSdkVersion MAX_SDK.toInteger()
+
 
     defaultConfig {
         applicationId "com.tck.av.music.clip"
-        minSdkVersion 24
-        targetSdkVersion 30
+        minSdkVersion MIN_SDK.toInteger()
+        targetSdkVersion MAX_SDK.toInteger()
         versionCode 1
         versionName "1.0"
 

@@ -1,4 +1,7 @@
-include ':lib_rtmp_service'
+include ':lib_ffmpeg'
+if (use_lib_rtmp_service.toBoolean()) {
+    include ':lib_rtmp_service'
+}
 include ':lib_media_extractor'
 include ':lib_common'
 include ':lib_pcm_player'
