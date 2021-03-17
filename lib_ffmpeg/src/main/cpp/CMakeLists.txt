@@ -35,18 +35,16 @@ set_target_properties(swscale
         ${CMAKE_SOURCE_DIR}/libs/${ANDROID_ABI}/libswscale.so)
 
 add_library(
-        myffmpeg-lib
+        myffmpeg
         SHARED
         myffmpeg-lib.cpp)
-
 
 find_library(
         log-lib
         log)
 
-
 target_link_libraries(
-        myffmpeg-lib
+        myffmpeg
         ${log-lib}
         avfilter avformat avcodec avutil swresample swscale
 )
